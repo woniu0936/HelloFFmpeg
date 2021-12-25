@@ -12,6 +12,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
 # 1. 定义so库和头文件所在目录，方面后面使用
 # CMAKE_SOURCE_DIR 为系统变量，指向 CMakeLists.txt 所在目录
 # ANDROID_ABI 也是系统变量，指向 so 对应的 CPU 框架目录：armeabi、armeabi-v7a、x86 ...
+#【注意：这里有一个坑，那就是不要把so文件放到jniLibs目录下，否则会编译失败，详情见：https://developer.android.com/studio/releases/gradle-plugin#cmake-imported-targets】
 set(FFMPEG_LIB_DIR ${CMAKE_SOURCE_DIR}/../nativeLibs/${ANDROID_ABI})
 
 # 2. 添加头文件目录
