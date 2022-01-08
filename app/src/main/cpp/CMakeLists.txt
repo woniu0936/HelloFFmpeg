@@ -9,6 +9,9 @@ cmake_minimum_required(VERSION 3.10.2)
 # 支持gnu++11
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
 
+# 定义一个变量SURCE_FILE，他的值是cpp下面的所有cpp文件
+file(GLOB SOURCE_FILE ${CMAKE_SOURCE_DIR}/*.cpp)
+
 # 1. 定义so库和头文件所在目录，方面后面使用
 # CMAKE_SOURCE_DIR 为系统变量，指向 CMakeLists.txt 所在目录
 # ANDROID_ABI 也是系统变量，指向 so 对应的 CPU 框架目录：armeabi、armeabi-v7a、x86 ...
@@ -82,7 +85,7 @@ add_library(
 
         # 列出参与编译的所有源文件
         # Provides a relative path to your source file(s).
-        native-lib.cpp)
+        ${SOURCE_FILE})
 
 # Searches for a specified prebuilt library and stores the path as a
 # variable. Because CMake includes system libraries in the search path by
@@ -116,6 +119,8 @@ target_link_libraries(
         avutil
         swresample
         swscale
+        #libz
+#        z
 
         # Links the target library to the log library
         # included in the NDK.
