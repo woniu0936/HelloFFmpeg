@@ -30,10 +30,12 @@ private:
     char *dataSource;
     pthread_t pid;
     //AVFormatContext 包含了视频的信息（宽、高等）
-    AVFormatContext *avFormatContext;
+    AVFormatContext *avFormatContext = 0;
+    //在构造方法里面赋值，所以可以不赋值
     JavaCallHelper *callHelper;
-    VideoChannel *videoChannel;
-    AudioChannel *audioChannel;
+    //指针初始化，一定要赋值，不然就不知道他会指向那块内存了，这时候判空就失效了
+    VideoChannel *videoChannel = 0;
+    AudioChannel *audioChannel = 0;
 };
 
 

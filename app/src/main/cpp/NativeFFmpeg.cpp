@@ -16,7 +16,8 @@ void *task_prepare(void *args) {
 NativeFFmpeg::NativeFFmpeg(JavaCallHelper *javaCallHelper, const char *dataSource) {
     this->callHelper = javaCallHelper;
     //内存拷贝，以防外面传进来的dataSource被释放之后，这里变成一个悬空指针
-    this->dataSource = new char[strlen(dataSource)];
+    //strlen获得字符串的长度，不包括\0，所以这里+1，不然可能有隐患
+    this->dataSource = new char[strlen(dataSource) + 1];
     strcpy(this->dataSource, dataSource);
 }
 
