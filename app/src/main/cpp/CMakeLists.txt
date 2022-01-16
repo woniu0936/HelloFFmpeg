@@ -122,7 +122,7 @@ target_link_libraries(
         #libz
 #        z
         android
-
+        OpenSLES
         # Links the target library to the log library
         # included in the NDK.
         # 列出所有需要链接的库

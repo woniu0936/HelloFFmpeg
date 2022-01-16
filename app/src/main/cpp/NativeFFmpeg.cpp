@@ -132,8 +132,10 @@ void NativeFFmpeg::start() {
     isPlaying = 1;
     pthread_create(&play_pid, 0, task_play, this);
     if (videoChannel) {
-        LOGE("--------------------start play----------------------------------------------------------------");
         videoChannel->play();
+    }
+    if (audioChannel) {
+        audioChannel->play();
     }
 }
 
@@ -148,7 +150,7 @@ void NativeFFmpeg::_start() {
             //ret==0表示成功，其他都为失败或者都区结束
             //stream_index表示这个流的一个序号
             if (audioChannel && avPacket->stream_index == audioChannel->id) {
-
+                audioChannel->avPackets.enQueue(avPacket);
             } else if (videoChannel && avPacket->stream_index == videoChannel->id) {
                 //抽出来的AVPacket入队，在videoChannel中解码、播放
 //                LOGE("--------------enQueue-avPacket--------------------work:%d", videoChannel->avPackets.getWork());
