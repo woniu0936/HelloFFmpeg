@@ -13,6 +13,13 @@ void *task_prepare(void *args) {
     return 0;
 }
 
+void *task_play(void *args) {
+    NativeFFmpeg *fFmpeg = static_cast<NativeFFmpeg *>(args);
+    fFmpeg->_start();
+    //如果没有return 0，会报错
+    return 0;
+}
+
 NativeFFmpeg::NativeFFmpeg(JavaCallHelper *javaCallHelper, const char *dataSource) {
     this->callHelper = javaCallHelper;
     //内存拷贝，以防外面传进来的dataSource被释放之后，这里变成一个悬空指针
@@ -100,10 +107,11 @@ void NativeFFmpeg::_prepare() {
 
         if (codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
             //音频
-            audioChannel = new AudioChannel();
+            audioChannel = new AudioChannel(i, context);
         } else if (codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
             //视频
-            videoChannel = new VideoChannel();
+            videoChannel = new VideoChannel(i, context);
+            videoChannel->setRenderFrameCallback(this->callback);
         }
 
         if (!audioChannel && !videoChannel) {
@@ -117,5 +125,45 @@ void NativeFFmpeg::_prepare() {
 
     //准备完毕，通知java随时可以开始播放
     callHelper->onPrepared(THREAD_CHILD);
+}
 
+void NativeFFmpeg::start() {
+    //正在播放
+    isPlaying = 1;
+    pthread_create(&play_pid, 0, task_play, this);
+    if (videoChannel) {
+        LOGE("--------------------start play----------------------------------------------------------------");
+        videoChannel->play();
+    }
+}
+
+void NativeFFmpeg::_start() {
+    //1、读取多媒体文件数据包（音视频数据包）
+    int ret;
+    while (isPlaying) {
+        //为AVPacket申请一块内存
+        AVPacket *avPacket = av_packet_alloc();
+        ret = av_read_frame(avFormatContext, avPacket);
+        if (ret == 0) {
+            //ret==0表示成功，其他都为失败或者都区结束
+            //stream_index表示这个流的一个序号
+            if (audioChannel && avPacket->stream_index == audioChannel->id) {
+
+            } else if (videoChannel && avPacket->stream_index == videoChannel->id) {
+                //抽出来的AVPacket入队，在videoChannel中解码、播放
+//                LOGE("--------------enQueue-avPacket--------------------work:%d", videoChannel->avPackets.getWork());
+                videoChannel->avPackets.enQueue(avPacket);
+            }
+        } else if (ret == AVERROR_EOF) {
+            //读取完成，但可能还没有播完
+//            LOGE("--------------读取完成，但可能还没有播完:%s--------------------", av_err2str(ret));
+        } else {
+            //读取失败
+            LOGE("--------------读取失败：%s--------------------", av_err2str(ret));
+        }
+    }
+}
+
+void NativeFFmpeg::setRenderFrameCallback(RenderFrameCallback callback) {
+    this->callback = callback;
 }

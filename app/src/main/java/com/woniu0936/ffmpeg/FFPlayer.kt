@@ -1,6 +1,7 @@
 package com.woniu0936.ffmpeg
 
 import android.util.Log
+import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 
@@ -32,7 +33,7 @@ class FFPlayer : SurfaceHolder.Callback {
      * 开始播放视频
      */
     fun start() {
-
+        nativeStart()
     }
 
     /**
@@ -70,14 +71,14 @@ class FFPlayer : SurfaceHolder.Callback {
      * 画布创建好了
      */
     override fun surfaceCreated(holder: SurfaceHolder) {
-
+        nativeSetSurface(holder.surface)
     }
 
     /**
      * 画布发生了变化
      */
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-
+        nativeSetSurface(holder.surface)
     }
 
     /**
@@ -91,10 +92,14 @@ class FFPlayer : SurfaceHolder.Callback {
      * A native method that is implemented by the 'ffmpeg' native library,
      * which is packaged with this application.
      */
-    external fun stringFromJNI(): String
-    external fun ffmpegInfo(): String
+    private external fun stringFromJNI(): String
+    private external fun ffmpegInfo(): String
 
-    external fun nativePrepare(dataSource: String)
+    private external fun nativePrepare(dataSource: String)
+
+    private external fun nativeStart()
+
+    private external fun nativeSetSurface(surface: Surface)
 
     companion object {
         // Used to load the 'ffmpeg' library on application startup.

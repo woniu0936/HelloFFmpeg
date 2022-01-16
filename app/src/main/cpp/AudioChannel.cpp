@@ -3,3 +3,11 @@
 //
 
 #include "AudioChannel.h"
+
+AudioChannel::AudioChannel(int id, AVCodecContext *avCodecContext) : BaseChannel(id, avCodecContext) {  ////将子类的id传递给父类
+
+}
+
+void AudioChannel::play() {
+
+}

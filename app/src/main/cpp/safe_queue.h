@@ -1,49 +1,86 @@
 //
-// Created by songhuan on 2022/1/5.
+// Created by liuxiang on 2017/10/15.
 //
 
-#ifndef HELLOFFMPEG_SAFE_QUEUE_H
-#define HELLOFFMPEG_SAFE_QUEUE_H
+#ifndef DNRECORDER_SAFE_QUEUE_H
+#define DNRECORDER_SAFE_QUEUE_H
 
 #include <queue>
 #include <pthread.h>
 
+
+//todo 是否使用c++11,玩玩而已。还是习惯posix标准的线程。。。。
+//打开 #define C11 ，使用c++ 11的 thread，注释掉 则使用pthread
+//#define C11
+#ifdef C11
+#include <thread>
+#endif
+
+using namespace std;
+
 template<typename T>
 class SafeQueue {
+    typedef void (*ReleaseHandle)(T *);
 
-    // typedef 定义一个函数指针
-    typedef void (*ReleaseCallback)( &
-
-    T);
+    typedef void (*SyncHandle)(queue<T> &);
 
 public:
     SafeQueue() {
-        pthread_mutex_init(&mutex, 0);
-        pthread_cond_init(&cond, 0);
+#ifdef C11
+
+#else
+        pthread_mutex_init(&mutex, NULL);
+        pthread_cond_init(&cond, NULL);
+#endif
+
     }
 
     ~SafeQueue() {
-        pthread_mutex_destroy(&mutex);
+#ifdef C11
+#else
         pthread_cond_destroy(&cond);
+        pthread_mutex_destroy(&mutex);
+#endif
+
     }
 
-    void push(T value) {
+    void enQueue(const T new_value) {
+#ifdef C11
+        lock_guard<mutex> lk(mt);
+        if (work) {
+            q.push(new_value);
+            cv.notify_one();
+        }
+#else
         pthread_mutex_lock(&mutex);
-        q.push(value);
-        //通知有了新数据到达
-        pthread_cond_signal(&cond);
+        if (work) {
+            q.push(new_value);
+            pthread_cond_signal(&cond);
+            pthread_mutex_unlock(&mutex);
+        }
         pthread_mutex_unlock(&mutex);
+#endif
+
     }
 
-    int pop( &
 
-    T value
-    ) {
-        //表示取数据成功还是失败
+    int deQueue(T &value) {
         int ret = 0;
+#ifdef C11
+        //占用空间相对lock_guard 更大一点且相对更慢一点，但是配合条件必须使用它，更灵活
+        unique_lock<mutex> lk(mt);
+        //false则不阻塞 往下走
+        cv.wait(lk,[this]{return !work || !q.empty();});
+        if (!q.empty()) {
+            value = q.front();
+            q.pop();
+            ret = 1;
+        }
+#else
+
         pthread_mutex_lock(&mutex);
-        while (q.empty()) {
-            //没有数据就等待
+        //在多核处理器下 由于竞争可能虚假唤醒 包括jdk也说明了
+        while (work && q.empty()) {
             pthread_cond_wait(&cond, &mutex);
         }
         if (!q.empty()) {
@@ -52,33 +89,95 @@ public:
             ret = 1;
         }
         pthread_mutex_unlock(&mutex);
+#endif
+
         return ret;
     }
 
-    void clear() {
+    void setWork(int work) {
+#ifdef C11
+        lock_guard<mutex> lk(mt);
+        this->work = work;
+#else
         pthread_mutex_lock(&mutex);
-        uint32_t size = q.size();
+        this->work = work;
+        pthread_cond_signal(&cond);
+        pthread_mutex_unlock(&mutex);
+#endif
+
+    }
+
+    int getWork() {
+        return this->work;
+    }
+
+    int empty() {
+        return q.empty();
+    }
+
+    int size() {
+        return q.size();
+    }
+
+    void clear() {
+#ifdef C11
+        lock_guard<mutex> lk(mt);
+        int size = q.size();
         for (int i = 0; i < size; ++i) {
-            //取出队首的数据
             T value = q.front();
-            //释放value
-            if (releaseCallback) {
-                releaseCallback(value);
-            }
+            releaseHandle(value);
+            q.pop();
+        }
+#else
+        pthread_mutex_lock(&mutex);
+        int size = q.size();
+        for (int i = 0; i < size; ++i) {
+            T value = q.front();
+            releaseHandle(&value);
             q.pop();
         }
         pthread_mutex_unlock(&mutex);
+#endif
+
     }
 
-    void setReleaseCallback(ReleaseCallback callback) {
-        this->releaseCallback = callback;
+    void sync() {
+#ifdef C11
+        lock_guard<mutex> lk(mt);
+        syncHandle(q);
+#else
+        pthread_mutex_lock(&mutex);
+        //同步代码块，当我们调用sync方法的时候，能保证是在同步队列块中操作queue队列
+        syncHandle(q);
+        pthread_mutex_unlock(&mutex);
+#endif
+
+    }
+
+    void setReleaseHandle(ReleaseHandle r) {
+        releaseHandle = r;
+    }
+
+    void setSyncHandle(SyncHandle s) {
+        syncHandle = s;
     }
 
 private:
-    pthread_mutex_t mutex;
+
+#ifdef C11
+    mutex mt;
+    condition_variable cv;
+#else
     pthread_cond_t cond;
-    queue <T> q;
-    ReleaseCallback releaseCallback;
+    pthread_mutex_t mutex;
+#endif
+
+    queue<T> q;
+    int work;
+    ReleaseHandle releaseHandle;
+    SyncHandle syncHandle;
+
 };
 
-#endif //HELLOFFMPEG_SAFE_QUEUE_H
+
+#endif //DNRECORDER_SAFE_QUEUE_H

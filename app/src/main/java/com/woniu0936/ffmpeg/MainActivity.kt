@@ -15,7 +15,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private val mVideoPath =
-        Environment.getExternalStorageDirectory().absolutePath + "/Movies/result.mp4"
+        Environment.getExternalStorageDirectory().absolutePath + "/byteflow/one_piece.mp4"
 //        Environment.getExternalStorageDirectory().absolutePath + "/byteflow/one_piece.mp4"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,7 +34,7 @@ class MainActivity : AppCompatActivity() {
 
         // 播放
         binding.btnStart.setOnClickListener {
-
+            player?.start()
         }
 
         //暂停

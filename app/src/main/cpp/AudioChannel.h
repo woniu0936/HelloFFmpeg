@@ -6,8 +6,13 @@
 #define HELLOFFMPEG_AUDIOCHANNEL_H
 
 
-class AudioChannel {
+#include "BaseChannel.h"
 
+class AudioChannel : public BaseChannel{
+public:
+    AudioChannel(int id, AVCodecContext *avCodecContext);
+
+    void play();
 };
 
 

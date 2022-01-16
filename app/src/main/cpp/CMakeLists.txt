@@ -121,6 +121,7 @@ target_link_libraries(
         swscale
         #libz
 #        z
+        android
 
         # Links the target library to the log library
         # included in the NDK.
